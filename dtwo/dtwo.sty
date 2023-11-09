@@ -1,0 +1,54 @@
+%% Copyright (C) 2023 Len Bui
+%%
+%% SPDX-License-Identifier: LPPL-1.3c+
+\NeedsTeXFormat{LaTeX2e}\relax
+\ProvidesPackage{dtwo}
+\RequirePackage{fancyvrb}
+\RequirePackage{l3keys2e}
+\RequirePackage{xparse}
+\RequirePackage{ifthen}
+\RequirePackage{adjustbox}
+\RequirePackage{luacode}
+
+% \jobname has an encoding issue if the .tex filename includes a multibyte string.
+% One needs to redefine DTwoJobname to fix it
+\def\DTwoJobname{\jobname}
+
+\ExplSyntaxOn
+\keys_define:nn { dtwo } {
+  output .choices:nn = {
+    {pdf, png}
+    { \tl_gset:NV \l_dtwo_mode \l_keys_choice_tl }
+  },
+  output .initial:n = png
+}
+\ProcessKeysOptions { dtwo }
+\ExplSyntaxOff
+
+%hint from https://tex.stackexchange.com/a/86355/9075
+\makeatletter
+\def\maxwidth#1{\ifdim\Gin@nat@width>#1 #1\else\Gin@nat@width\fi}
+\makeatother
+
+\ExplSyntaxOn
+\let\DTwoMode\l_dtwo_mode
+\ExplSyntaxOff
+
+\newcounter{FigNum}
+\setcounter{FigNum}{1}
+
+\makeatletter
+  \NewDocumentEnvironment{dtwo}{}{%
+    \VerbatimOut{\DTwoJobname-\arabic{FigNum}-dtwo.d2}}
+  {%
+    \endVerbatimOut
+    \directlua{
+      local jobname=\luastring{\DTwoJobname-\arabic{FigNum}}
+      local dtwomode=\luastring{\DTwoMode}
+      require("dtwo.lua")
+      convertToDiagram(jobname, dtwomode)
+    }
+    \includegraphics[width=\maxwidth{\textwidth}]{\DTwoJobname-\arabic{FigNum}-dtwo.\DTwoMode}
+    \stepcounter{FigNum}
+  }
+\makeatother
